@@ -1,12 +1,163 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <locale>
 #include <regex>
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+
 
 using namespace std;
 
-string convertMarkdownToHTML(const  string &markdown) {
-    return markdown; //TODO Реалізувати цю функцію
+const string UNCHARS = " \n\0";
+
+bool isAlpha(char c) {
+    return UNCHARS.find(c) == string::npos;
+}
+
+
+bool hasBothNeighbors(const std::string& input, size_t pos, char targetChar) {
+    if (pos >= input.size()) {
+        return false; // Invalid position
+    }
+
+    char rightChar = (pos < input.size() - 1) ? input[pos + 1] : '\0';  // '\0' - if there is no character to the right
+    char leftChar = (pos > 0) ? input[pos - 1] : '\0';  // '\0' - if there is no character to the left
+
+    return isAlpha(leftChar) && isAlpha(rightChar);
+}
+
+bool hasNeighboringCharacters(const std::string& input, size_t pos, char targetChar, int count) {
+    if (pos >= input.size()) {
+        return false; // Invalid position
+    }
+
+    char rightChar = (pos < input.size() - 1) ? input[pos + 1] : '\0';
+    char leftChar = (pos > 0) ? input[pos - 1] : '\0';
+
+    switch (count) {
+        case 1:
+            return !(targetChar == rightChar && (input[pos + 2] != ' ' || leftChar != ' '));
+        case 2:
+        case 3:
+            return isAlpha(leftChar) || isAlpha(rightChar);
+        case 4:
+            return (leftChar == '\n' && targetChar == rightChar && input[pos + 2] == targetChar && input[pos + 3] == '\n');
+        default:
+            return true; // Handle other cases here
+    }
+}
+
+bool hasNestedMarkup(const std::string& input) {
+    int boldCount = 0;
+    int italicCount = 0;
+    int monospacedCount = 0;
+    int preformattedCount = 0;
+
+    for (int i = 0; i < input.length(); ++i) {
+        if (input.substr(i, 3) == "```" && hasNeighboringCharacters(input, i, '`', 4)) {
+            preformattedCount += 1;
+            i += 2;
+            continue;
+        }
+        if(preformattedCount % 2 != 0){
+            continue;
+        }
+        if (input.substr(i, 2) == "**" && hasNeighboringCharacters(input, i, '*', 1)) {
+            boldCount += 1;
+            i += 1;
+        } else if (input.substr(i, 1) == "_" && hasNeighboringCharacters(input, i, '_', 2) && !hasBothNeighbors(input, i, '_')) {
+            italicCount += 1;
+        } else if (input.substr(i, 1) == "`" && hasNeighboringCharacters(input, i, '`', 3)) {
+            monospacedCount += 1;
+        }
+    }
+
+    cout << "italic: " << italicCount << endl;
+
+    return boldCount % 2 != 0 || italicCount % 2 != 0 || monospacedCount % 2 != 0 || preformattedCount % 2 != 0;
+}
+
+std::string convertMarkdownToHTML(const std::string& input) {
+    std::string result;
+    bool insideBold = false;
+    bool insideItalic = false;
+    bool insideMonospaced = false;
+    bool insidePreformatted = false;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        if((insideBold && insideItalic) ||
+           (insideBold && insideMonospaced) ||
+           (insideBold && insidePreformatted) ||
+           (insideItalic && insideMonospaced) ||
+           (insideItalic && insidePreformatted) ||
+           (insideMonospaced && insidePreformatted)){
+            return "ERROR";
+        }
+        if (input.substr(i, 3) == "```") {
+            if (!insidePreformatted) {
+                result += "<pre>";
+                insidePreformatted = true;
+            } else {
+                result += "</pre>";
+                insidePreformatted = false;
+            }
+            i += 3;
+        }else if(insidePreformatted){
+            result += input[i];
+            continue;
+        }else if (input.substr(i, 2) == "**") {
+            if (!insideBold) {
+                result += "<b>";
+                insideBold = true;
+            } else {
+                result += "</b>";
+                insideBold = false;
+            }
+            i += 1;
+        } else if (input.substr(i, 1) == "_" && !hasBothNeighbors(input, i, '_')) {
+            if (isalpha(input[i]) && i > 0 && input[i - 1] == '_') {
+                result += input[i];
+            }else {
+                if (!insideItalic) {
+                    result += "<i>";
+                    insideItalic = true;
+                } else {
+                    result += "</i>";
+                    insideItalic = false;
+                }
+            }
+        } else if (input.substr(i, 1) == "`") {
+            if (!insideMonospaced) {
+                result += "<tt>";
+                insideMonospaced = true;
+            } else {
+                result += "</tt>";
+                insideMonospaced = false;
+            }
+        }else {
+            result += input[i];
+        }
+    }
+    std::vector<std::string> paragraphs;
+    std::string htmlBuilder;
+    size_t n = 0, m = 0;
+
+    for (size_t i = 0; i <= input.size(); ++i) {
+        m++;
+        if (i == result.size() || result.substr(i, 2) == "\n\n") {
+            paragraphs.push_back(result.substr(n, m - n - 1)); // Вирахування правильної кількості символів
+            n = m;
+        }
+    }
+
+    for (const auto &paragraph : paragraphs) {
+        if (!paragraph.empty()) {
+            htmlBuilder.append("<p>").append(paragraph).append("</p>\n");
+        }
+    }
+    cout << htmlBuilder;
+    return result;
 }
 
 void saveHTMLToFile(const string &html, const string &outputPath) {
@@ -20,7 +171,16 @@ void saveHTMLToFile(const string &html, const string &outputPath) {
     }
 }
 
+/*int main() {
+    std::string input = "_ - а це нижнє підкреслення";
+    bool result = hasNestedMarkup(input);
+    std::cout << "Результат: " << (result ? "Так" : "Ні") << std::endl;
+    return 0;
+}*/
+
+
 int main(int argc, char *argv[]) {
+    system("chcp 1251>0"); //Встановлення кодування символів
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << " /path/to/input.md [--out /path/to/output.html]" << endl;
         return EXIT_FAILURE;
@@ -38,7 +198,17 @@ int main(int argc, char *argv[]) {
 
     inputFile.close();
 
+    if (hasNestedMarkup(markdownContent)) {
+        cerr << "Error: Nested markup detected." << endl;
+        return EXIT_FAILURE;
+    }
+
     string htmlContent = convertMarkdownToHTML(markdownContent);
+
+    if(htmlContent == "ERROR"){
+        cerr << "Error: Nested 2222." << endl;
+        return EXIT_FAILURE;
+    }
 
     string outputPath = "";
     for (int i = 2; i < argc; ++i) {
