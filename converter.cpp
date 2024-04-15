@@ -32,8 +32,11 @@ std::string Converter::markdownToHTML(std::string markdownText) {
 
     return std::accumulate(paragraphs.begin(), paragraphs.end(), std::string{},
                            [](const std::string &a, const std::string &b) {
-                               return a + '\n' + b;
-    });
+                               if (!a.empty())
+                                   return a + '\n' + b;
+                               else
+                                   return a + b;
+                           });
 }
 
 std::vector<std::string> Converter::splitParagraphs(const std::string& markdownText) {
