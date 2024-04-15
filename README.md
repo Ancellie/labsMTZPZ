@@ -12,17 +12,14 @@ Clone the repository from GitHub:
 ```cd labsMTZPZ```
 
 ## Usage
-1. Compile C++ files:
-Enter the command to compile your C++ files:
+Use exe file:
+Enter the command to start the program:
 
-```g++ -o output_file src/main/cpp/*.cpp```
+```./lab1MTZPZ.exe inputFile [--out outputFile]```
 
-Replace output_file with the name you want for the compiled executable file.
+Examle:
 
-2. Execute the compiled file:
-After successful compilation, you can run C++ code:
-
-```./output_file /path/to/markdownfile.txt --out /path/to/output.html```
+```./lab1MTZPZ.exe example.txt --out output.html```
 
 # Revert commit
 https://github.com/Ancellie/labsMTZPZ/commit/2f52ba405c10b608510ae4f03d0700f19ea017c2
