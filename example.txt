@@ -1,9 +1,8 @@
-Це текст у форматі Markdown. В межах нашої роботи ми розглядаємо дуже урізану підмножину цієї мови розмітки. Текст можна розділяти на абзаци, лишаючи між абзацами 1 (один) порожній рядок.
+This is Markdown text. As part of our work, we consider a very truncated subset of this markup language. Text can be divided into paragraphs, leaving 1 (one) empty line between paragraphs.
 
-Ми можемо виділяти текст **жирним**, робити його _курсивним_ або `фіксованої ширини`. Також є можливість зберігати фрагменти преформатованого тексту:
+We can make the text * * bold * *, make it _ italic _ or 'fixed width'. It is also possible to save fragments of preformatted text:
 ```
-Цей текст є преформатований. 
-   Це означає, що він відобразиться, як є, і жодне інше форматування, як от **жирний** чи _курсив_ на нього не 
-впливає.          А ще тут усі пробіли, відступи та перенесення рядка зберігаються як є
+This text is preformatted.
+This means that it will appear as is, and no other formatting, such as * * bold * * or _ italic _ on it
+influences.      And here all spaces, indents and line wrap are stored as is
 ```
-
